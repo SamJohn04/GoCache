@@ -18,8 +18,10 @@ func main() {
     var port, server string
     cache := make(map[string]requestResponse)
 
-    fmt.Print("Enter port and server to connect to: ")
-    fmt.Scanln(&port, &server)
+    fmt.Print("Enter port to connect to: ")
+    fmt.Scanln(&port)
+    fmt.Print("Enter server to connect to: ")
+    fmt.Scanln(&server)
 
     port = fmt.Sprintf(":%v", port)
 
@@ -29,9 +31,11 @@ func main() {
         seek := r.URL.Path[1:]
 
         if value, exists := cache[seek]; exists {
+            fmt.Println("Cache HIT")
             w.WriteHeader(value.statusCode)
             io.Copy(w, strings.NewReader(value.data))
         } else {
+            fmt.Println("Cache MISS")
             resp := forward(r, server, seek)
             defer resp.Body.Close()
 
