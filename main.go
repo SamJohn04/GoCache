@@ -1,7 +1,6 @@
 package main
 
 import (
-    "strings"
 	"bytes"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 
 type requestResponse struct {
     statusCode int
+    header map[string]map[int]string
     data string
 }
 
@@ -30,30 +30,34 @@ func main() {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         seek := r.URL.Path[1:]
 
-        if value, exists := cache[seek]; exists {
-            fmt.Println("Cache HIT")
-            w.WriteHeader(value.statusCode)
-            io.Copy(w, strings.NewReader(value.data))
-        } else {
+        if _, exists := cache[seek]; !exists {
             fmt.Println("Cache MISS")
             resp := forward(r, server, seek)
             defer resp.Body.Close()
 
+            header := make(map[string]map[int]string)
             for k, vals := range resp.Header {
-                for _, v := range vals {
-                    w.Header().Add(k, v)
+                header[k] = make(map[int]string)
+                for val, v := range vals {
+                    header[k][val] = v
                 }
             }
 
             s, _ := io.ReadAll(resp.Body)
             cache[seek] = requestResponse{
                 statusCode: resp.StatusCode,
+                header: header,
                 data: string(s),
             }
-
-            w.WriteHeader(resp.StatusCode)
-            io.Copy(w, resp.Body)
         }
+        
+        for i, vals := range cache[seek].header {
+            for _, v := range vals {
+                w.Header().Add(i, v)
+            }
+        }
+        w.WriteHeader(cache[seek].statusCode)
+        fmt.Fprintf(w, "%v", cache[seek].data)
     })
 
     log.Fatal(http.ListenAndServe(port, nil))
