@@ -49,6 +49,8 @@ func main() {
                 header: header,
                 data: string(s),
             }
+        } else {
+            fmt.Println("Cache HIT")
         }
         
         for i, vals := range cache[seek].header {
