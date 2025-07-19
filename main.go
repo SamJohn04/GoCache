@@ -30,7 +30,7 @@ func main() {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         seek := r.URL.Path[1:]
 
-        if _, exists := cache[seek]; !exists {
+        if value, exists := cache[seek]; !exists {
             fmt.Println("Cache MISS")
             resp := forward(r, server, seek)
             defer resp.Body.Close()
@@ -43,6 +43,10 @@ func main() {
                 }
             }
 
+            header["X-Cache"] = map[int]string {
+                0: "MISS",
+            }
+
             s, _ := io.ReadAll(resp.Body)
             cache[seek] = requestResponse{
                 statusCode: resp.StatusCode,
@@ -50,6 +54,7 @@ func main() {
                 data: string(s),
             }
         } else {
+            value.header["X-Cache"][0] = "HIT"
             fmt.Println("Cache HIT")
         }
         
